@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
 		if(i != (c-1)){printf("\n\n");}
 	}
 
-	printf("%i nonzero values with a sparsity of %f\n", nnz, ((float) nnz) / (h * w * c));
+	printf("%i nonzero values with a sparsity of %f\n", nnz, (1 - ((float) nnz) / (h * w * c)));
 
 	for(i = 0; i < c; i++){
 		for(j = 0; j < h; j++){
