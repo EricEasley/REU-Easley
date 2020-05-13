@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include <time.h>
 
+/* Eric, some comments:
+   1. Move the convolution loops to a separate function of its own
+   2. I assume you are yet to add the number of channels and number of kernels controls to the code
+   3. When you do, you will need an input argument or a header in the input feature map to tell the algorithm
+   how the feature is laid out - HWC or CHW.
+   */
+
 #define ITERATIONS 1000000
 
 int main(int argc, char *argv[]){
