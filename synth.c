@@ -16,7 +16,7 @@ int main(int argc, char *argv[]){
 	int nnz;
 
 	if(argc != 7){
-		printf("usage: ./synth <channels> <height> <width> <sparsity (0 - 100)> <ordering (0 = HWC; 1 = CHW)> <output file name>\n");
+		printf("usage: ./synth <channels> <height> <width> <nnz density (0 - 100)> <ordering (0 = HWC; 1 = CHW)> <output file name>\n");
 		return 1;
 	}
 
