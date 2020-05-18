@@ -11,7 +11,7 @@
 
 #define ITERATIONS 1
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize);
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize, int stride);
 
 int main(int argc, char *argv[]){
 	FILE *kernelfile, *inputfile;
@@ -21,13 +21,14 @@ int main(int argc, char *argv[]){
 	unsigned long long int iterations;
 	float ***imap, ***kernel, ***omap;
 	clock_t time;
+	int stride;
 
 /*
 	Setup
 */
 
-	if(argc != 3){
-		printf("usage: ./conv <input feature map> <kernel>\n");
+	if(argc != 4){
+		printf("usage: ./conv <input feature map> <kernel> <stride>\n");
 		exit(1);
 	}
 
@@ -42,6 +43,8 @@ int main(int argc, char *argv[]){
 		printf("Couldn't open kernel file\n");
 		exit(1);
 	}
+
+	stride = atoi(argv[3]);
 
 	fscanf(inputfile, "%s", itype);
 
@@ -59,8 +62,8 @@ int main(int argc, char *argv[]){
 		fscanf(kernelfile, "%i %i %i", &k1, &k2, &kc);
 	}
 
-	o1 = i1 - k1 + 1;
-	o2 = i2 - k2 + 1;
+	o1 = (i1 - k1) / stride + 1;
+	o2 = (i2 - k2) / stride + 1;
 	oc = ic;
 
 	if(!strcmp(itype, "CHW")){
@@ -138,7 +141,7 @@ int main(int argc, char *argv[]){
 	Convolution algorithm
 */
 
-	omap = convolve(imap, kernel, omap, itype, ic, i1, k1, o1);
+	omap = convolve(imap, kernel, omap, itype, ic, i1, k1, o1, stride);
 
 #ifdef PRINT
 	for(x = 0; x < oc; x++){
@@ -211,7 +214,7 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize){
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize, int stride){
 	clock_t time;
 	unsigned long long int iterations;
 	int i, j, x, y, c;
@@ -248,7 +251,7 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], i
 		                	temp[c][i][j] = 0;
 		                        	for(x = 0; x < ksize; x++){
 		                                	for(y = 0; y < ksize; y++){
-		                                        	temp[c][i][j] += imap[c][i + x][j + y] * kernel[c][x][y];
+		                                        	temp[c][i][j] += imap[c][i*stride + x][j*stride + y] * kernel[c][x][y];
 		                                	}
 		                        	}
 		                	}
@@ -262,7 +265,7 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], i
                                         temp[i][j][c] = 0;
                                                 for(x = 0; x < ksize; x++){
                                                         for(y = 0; y < ksize; y++){
-                                                                temp[i][j][c] += imap[i + x][j + y][c] * kernel[x][y][c];
+                                                                temp[i][j][c] += imap[i*stride + x][j*stride + y][c] * kernel[x][y][c];
                                                         }
                                                 }
                                         }
