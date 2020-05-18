@@ -13,6 +13,15 @@
 
 float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize, int stride);
 
+/* Changes we discussed:
+   1. Move memory allocation outside convolve()
+   2. Swap the if on HWC/CHW and the for loop on ITERATIONS
+   3. Split channels into input channels and output channels
+   4. Remove omap from convole(.)
+   5. Check if the HWC implementation of loop nest is efficient. Maybe the for loop on c must be nested under the 
+   for loops for i and j.
+*/
+
 int main(int argc, char *argv[]){
 	FILE *kernelfile, *inputfile;
 	int k1, k2, kc, i1, i2, ic, o1, o2, oc;
