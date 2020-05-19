@@ -9,18 +9,9 @@
 #include <time.h>
 #include <string.h>
 
-#define ITERATIONS 1
+#define ITERATIONS 1000
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize, int stride);
-
-/* Changes we discussed:
-   1. Move memory allocation outside convolve()
-   2. Swap the if on HWC/CHW and the for loop on ITERATIONS
-   3. Split channels into input channels and output channels
-   4. Remove omap from convole(.)
-   5. Check if the HWC implementation of loop nest is efficient. Maybe the for loop on c must be nested under the 
-   for loops for i and j.
-*/
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int isize, int ksize, int osize, int stride);
 
 int main(int argc, char *argv[]){
 	FILE *kernelfile, *inputfile;
@@ -73,12 +64,20 @@ int main(int argc, char *argv[]){
 
 	o1 = (i1 - k1) / stride + 1;
 	o2 = (i2 - k2) / stride + 1;
-	oc = ic;
+	oc = ic * kc;
 
 	if(!strcmp(itype, "CHW")){
 
 		imap = (float***) malloc(sizeof(float**) * ic);
 		kernel = (float***) malloc(sizeof(float**) * kc);
+		omap = (float***) malloc(sizeof(float**) * oc);
+
+                for(i = 0; i < oc; i++){
+                        omap[i] = (float**) malloc(sizeof(float*) * o1);
+                        for(j = 0; j < o1; j++){
+                                omap[i][j] = (float*) malloc(sizeof(float) * o2);
+                        }
+                }
 
   		for(i = 0; i < ic; i++){
 			imap[i] = (float**) malloc(sizeof(float*) * i1);
@@ -114,6 +113,14 @@ int main(int argc, char *argv[]){
 
   		imap = (float***) malloc(sizeof(float**) * i1);
 	  	kernel = (float***) malloc(sizeof(float**) * k1);
+		omap = (float***) malloc(sizeof(float**) * o1);
+
+                for(i = 0; i < o1; i++){
+                        omap[i] = (float**) malloc(sizeof(float*) * o2);
+                        for(j = 0; j < o2; j++){
+                                omap[i][j] = (float*) malloc(sizeof(float) * oc);
+                        }
+                }
 
   		for(i = 0; i < i1; i++){
   			imap[i] = (float**) malloc(sizeof(float*) * i2);
@@ -150,7 +157,7 @@ int main(int argc, char *argv[]){
 	Convolution algorithm
 */
 
-	omap = convolve(imap, kernel, omap, itype, ic, i1, k1, o1, stride);
+	convolve(imap, kernel, omap, itype, ic, kc, i1, k1, o1, stride);
 
 #ifdef PRINT
 	for(x = 0; x < oc; x++){
@@ -223,58 +230,41 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int channels, int isize, int ksize, int osize, int stride){
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  int icnls, int kcnls, int isize, int ksize, int osize, int stride){
 	clock_t time;
 	unsigned long long int iterations;
-	int i, j, x, y, c;
-	float ***temp;
-
-	if(!strcmp(type, "CHW")){
-		temp = (float***) malloc(sizeof(float**) * channels);
-
-		for(i = 0; i < channels; i++){
-			temp[i] = (float**) malloc(sizeof(float*) * osize);
-			for(j = 0; j < osize; j++){
-				temp[i][j] = (float*) malloc(sizeof(float) * osize);
-			}
-		}
-	} else {
-                temp = (float***) malloc(sizeof(float**) * osize);
-
-                for(i = 0; i < osize; i++){
-                        temp[i] = (float**) malloc(sizeof(float*) * osize);
-                        for(j = 0; j < osize; j++){
-                                temp[i][j] = (float*) malloc(sizeof(float) * channels);
-                        }
-                }
-	}
+	int i, j, x, y, ic, kc;
 
         time = clock();
 
-        for(iterations = 0; iterations < ITERATIONS; iterations++){
-
-		if(!strcmp(type, "CHW")){
-			for(c = 0; c < channels; c++){
-			        for(i = 0; i < osize; i++){
-		        	        for(j = 0; j < osize; j++){
-		                	temp[c][i][j] = 0;
-		                        	for(x = 0; x < ksize; x++){
-		                                	for(y = 0; y < ksize; y++){
-		                                        	temp[c][i][j] += imap[c][i*stride + x][j*stride + y] * kernel[c][x][y];
+	if(!strcmp(type, "CHW")){
+	        for(iterations = 0; iterations < ITERATIONS; iterations++){
+			for(ic = 0; ic < icnls; ic++){
+				for(kc = 0; kc < kcnls; kc++){
+				        for(i = 0; i < osize; i++){
+			        	        for(j = 0; j < osize; j++){
+		        	        	omap[ic*icnls + kc][i][j] = 0;
+		                	        	for(x = 0; x < ksize; x++){
+		                        	        	for(y = 0; y < ksize; y++){
+		                                	        	omap[ic*icnls + kc][i][j] += imap[ic][i*stride + x][j*stride + y] * kernel[kc][x][y];
+								}
 		                                	}
 		                        	}
 		                	}
 				}
 			}
-
-        	} else { // HWC
-			for(c = 0; c < channels; c++){
-                                for(i = 0; i < osize; i++){
-                                        for(j = 0; j < osize; j++){
-                                        temp[i][j][c] = 0;
-                                                for(x = 0; x < ksize; x++){
-                                                        for(y = 0; y < ksize; y++){
-                                                                temp[i][j][c] += imap[i*stride + x][j*stride + y][c] * kernel[x][y][c];
+		}
+        } else { // HWC
+		for(iterations = 0; iterations < ITERATIONS; iterations++){
+			for(i = 0; i < osize; i++){
+                                for(j = 0; j < osize; j++){
+					for(ic = 0; ic < icnls; ic++){
+	                                        for(kc = 0; kc < kcnls; kc++){
+        	                                omap[i][j][ic*icnls + kc] = 0;
+                	                                for(x = 0; x < ksize; x++){
+                        	                                for(y = 0; y < ksize; y++){
+                                	                                omap[i][j][ic*icnls + kc] += imap[i*stride + x][j*stride + y][ic] * kernel[x][y][kc];
+								}
                                                         }
                                                 }
                                         }
@@ -289,5 +279,5 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], i
 
         printf("Discrete convolution took %lf seconds for %i iterations\n", (double)time/CLOCKS_PER_SEC, ITERATIONS);
 
-	return temp;
+	return omap;
 }
