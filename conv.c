@@ -11,7 +11,8 @@
 
 #define ITERATIONS 1000
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int isize, int ksize, int osize, int stride);
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride);
+static __inline__ unsigned long long rdtsc(void);
 
 int main(int argc, char *argv[]){
 	FILE *kernelfile, *inputfile;
@@ -157,7 +158,7 @@ int main(int argc, char *argv[]){
 	Convolution algorithm
 */
 
-	convolve(imap, kernel, omap, itype, ic, kc, i1, k1, o1, stride);
+	convolve(imap, kernel, omap, itype, ic, kc, k1, k2, o1, o2, stride);
 
 #ifdef PRINT
 	for(x = 0; x < oc; x++){
@@ -230,22 +231,24 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  int icnls, int kcnls, int isize, int ksize, int osize, int stride){
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride){
 	clock_t time;
 	unsigned long long int iterations;
 	int i, j, x, y, ic, kc;
+	unsigned long long clocks;
 
         time = clock();
+	clocks = rdtsc();
 
 	if(!strcmp(type, "CHW")){
 	        for(iterations = 0; iterations < ITERATIONS; iterations++){
 			for(ic = 0; ic < icnls; ic++){
 				for(kc = 0; kc < kcnls; kc++){
-				        for(i = 0; i < osize; i++){
-			        	        for(j = 0; j < osize; j++){
+				        for(i = 0; i < oh; i++){
+			        	        for(j = 0; j < ow; j++){
 		        	        	omap[ic*icnls + kc][i][j] = 0;
-		                	        	for(x = 0; x < ksize; x++){
-		                        	        	for(y = 0; y < ksize; y++){
+		                	        	for(x = 0; x < kh; x++){
+		                        	        	for(y = 0; y < kw; y++){
 		                                	        	omap[ic*icnls + kc][i][j] += imap[ic][i*stride + x][j*stride + y] * kernel[kc][x][y];
 								}
 		                                	}
@@ -256,13 +259,13 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 		}
         } else { // HWC
 		for(iterations = 0; iterations < ITERATIONS; iterations++){
-			for(i = 0; i < osize; i++){
-                                for(j = 0; j < osize; j++){
+			for(i = 0; i < oh; i++){
+                                for(j = 0; j < ow; j++){
 					for(ic = 0; ic < icnls; ic++){
 	                                        for(kc = 0; kc < kcnls; kc++){
         	                                omap[i][j][ic*icnls + kc] = 0;
-                	                                for(x = 0; x < ksize; x++){
-                        	                                for(y = 0; y < ksize; y++){
+                	                                for(x = 0; x < kh; x++){
+                        	                                for(y = 0; y < kw; y++){
                                 	                                omap[i][j][ic*icnls + kc] += imap[i*stride + x][j*stride + y][ic] * kernel[x][y][kc];
 								}
                                                         }
@@ -276,8 +279,30 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
         }
 
         time = clock() - time;
+	clocks = rdtsc() - clocks;
 
         printf("Discrete convolution took %lf seconds for %i iterations\n", (double)time/CLOCKS_PER_SEC, ITERATIONS);
+	printf("Clocks: %lli\n", clocks);
 
 	return omap;
 }
+
+#if defined(__i386__)
+
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned long long int x;
+    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+    return x;
+}
+
+#elif defined(__x86_64__)
+
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned hi, lo;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
+}
+
+#endif
