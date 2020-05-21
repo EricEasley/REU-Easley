@@ -22,14 +22,27 @@ int main(int argc, char *argv[]){
 	unsigned long long int iterations;
 	float ***imap, ***kernel, ***omap;
 	clock_t time;
-	int stride;
+	int stride, padding;
 
 /*
 	Setup
 */
 
-	if(argc != 4){
-		printf("usage: ./conv <input feature map> <kernel> <stride>\n");
+	if(argc != 5){
+		printf("usage: ./conv <input feature map> <kernel> <stride> <padding>\n");
+		exit(1);
+	}
+
+	stride = atoi(argv[3]);
+	padding = atoi(argv[4]);
+
+	if(stride <= 0){
+		printf("Stride must be a positive integer\n");
+		exit(1);
+	}
+
+	if(padding < 0){
+		printf("Padding must be a non-negative integer\n");
 		exit(1);
 	}
 
@@ -44,8 +57,6 @@ int main(int argc, char *argv[]){
 		printf("Couldn't open kernel file\n");
 		exit(1);
 	}
-
-	stride = atoi(argv[3]);
 
 	fscanf(inputfile, "%s", itype);
 
@@ -62,6 +73,9 @@ int main(int argc, char *argv[]){
 	} else {
 		fscanf(kernelfile, "%i %i %i", &k1, &k2, &kc);
 	}
+
+	i1 = i1 + 2*padding;
+	i2 = i2 + 2*padding;
 
 	o1 = (i1 - k1) / stride + 1;
 	o2 = (i2 - k2) / stride + 1;
@@ -103,9 +117,9 @@ int main(int argc, char *argv[]){
     		}
 
     		for(x = 0; x < ic; x++){
-  	  		for(i = 0; i < i1; i++){
-        			for(j = 0; j < i2; j++){
-          				fscanf(inputfile, "%f", imap[x][i] + j);
+  	  		for(i = 0; i < (i1 - 2*padding); i++){
+        			for(j = 0; j < (i2 - 2*padding); j++){
+          				fscanf(inputfile, "%f", imap[x][i + padding] + j + padding);
         			}
       			}
     		}
@@ -145,10 +159,10 @@ int main(int argc, char *argv[]){
   	  		}
     		}
 
-    		for(x = 0; x < i1; x++){
-  	  		for(i = 0; i < i2; i++){
+    		for(x = 0; x < (i1 - 2*padding); x++){
+  	  		for(i = 0; i < (i2 - 2*padding); i++){
         			for(j = 0; j < ic; j++){
-          				fscanf(inputfile, "%f", imap[x][i] + j);
+          				fscanf(inputfile, "%f", imap[x + padding][i + padding] + j);
         			}
       			}
     		}
@@ -227,6 +241,8 @@ int main(int argc, char *argv[]){
 	free(kernel);
 	free(imap);
 	free(omap);
+	fclose(kernelfile);
+	fclose(inputfile);
 
 	return 0;
 }
