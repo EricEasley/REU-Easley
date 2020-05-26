@@ -9,7 +9,7 @@
 #include <time.h>
 #include <string.h>
 
-#define ITERATIONS 1000
+#define ITERATIONS 1000000
 
 float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride);
 static __inline__ unsigned long long rdtsc(void);
@@ -297,8 +297,8 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
         time = clock() - time;
 	clocks = rdtsc() - clocks;
 
-        printf("Discrete convolution took %lf seconds for %i iterations\n", (double)time/CLOCKS_PER_SEC, ITERATIONS);
-	printf("Clocks: %lli\n", clocks);
+        printf("%s ordering of %i and %i channels over %i and %i channels took %lf seconds for %i iterations, with %llu cycles\n", type, kh, kcnls, (oh - 1) * stride + kh, icnls, (double)time/CLOCKS_PER_SEC, ITERATIONS, clocks);
+//	printf("Clocks: %lli\n", clocks);
 
 	return omap;
 }
