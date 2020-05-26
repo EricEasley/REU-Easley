@@ -1,5 +1,5 @@
 #!/bin/bash
-#	Generates a variety of matrices with differen sizes and numbers of channels
+#	Generates a variety of matrices with different sizes and numbers of channels
 
 #	HWC
 cd matrices
