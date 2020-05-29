@@ -9,10 +9,10 @@
 #include <time.h>
 #include <string.h>
 
-#define ITERATIONS 1000000
+#define ITERATIONS 1000
 
 float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride);
-static __inline__ unsigned long long rdtsc(void);
+unsigned long read_cycles(void);
 
 int main(int argc, char *argv[]){
 	FILE *kernelfile, *inputfile;
@@ -254,7 +254,7 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 	unsigned long long clocks;
 
         time = clock();
-	clocks = rdtsc();
+	clocks = read_cycles();
 
 	if(!strcmp(type, "CHW")){
 	        for(iterations = 0; iterations < ITERATIONS; iterations++){
@@ -262,10 +262,10 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 				for(kc = 0; kc < kcnls; kc++){
 				        for(i = 0; i < oh; i++){
 			        	        for(j = 0; j < ow; j++){
-		        	        	omap[ic*icnls + kc][i][j] = 0;
+		        	        	omap[ic*kcnls + kc][i][j] = 0;
 		                	        	for(x = 0; x < kh; x++){
 		                        	        	for(y = 0; y < kw; y++){
-		                                	        	omap[ic*icnls + kc][i][j] += imap[ic][i*stride + x][j*stride + y] * kernel[kc][x][y];
+		                                	        	omap[ic*kcnls + kc][i][j] += imap[ic][i*stride + x][j*stride + y] * kernel[kc][x][y];
 								}
 		                                	}
 		                        	}
@@ -279,10 +279,10 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
                                 for(j = 0; j < ow; j++){
 					for(ic = 0; ic < icnls; ic++){
 	                                        for(kc = 0; kc < kcnls; kc++){
-        	                                omap[i][j][ic*icnls + kc] = 0;
+        	                                omap[i][j][ic*kcnls + kc] = 0;
                 	                                for(x = 0; x < kh; x++){
                         	                                for(y = 0; y < kw; y++){
-                                	                                omap[i][j][ic*icnls + kc] += imap[i*stride + x][j*stride + y][ic] * kernel[x][y][kc];
+                                	                                omap[i][j][ic*kcnls + kc] += imap[i*stride + x][j*stride + y][ic] * kernel[x][y][kc];
 								}
                                                         }
                                                 }
@@ -295,7 +295,7 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
         }
 
         time = clock() - time;
-	clocks = rdtsc() - clocks;
+	clocks = read_cycles() - clocks;
 
         printf("%s ordering of %i and %i channels over %i and %i channels took %lf seconds for %i iterations, with %llu cycles\n", type, kh, kcnls, (oh - 1) * stride + kh, icnls, (double)time/CLOCKS_PER_SEC, ITERATIONS, clocks);
 //	printf("Clocks: %lli\n", clocks);
@@ -303,22 +303,9 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 	return omap;
 }
 
-#if defined(__i386__)
-
-static __inline__ unsigned long long rdtsc(void)
+unsigned long read_cycles(void)
 {
-    unsigned long long int x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
+  unsigned long cycles;
+  asm volatile ("rdcycle %0" : "=r" (cycles));
+  return cycles;
 }
-
-#elif defined(__x86_64__)
-
-static __inline__ unsigned long long rdtsc(void)
-{
-    unsigned hi, lo;
-    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-
-#endif
