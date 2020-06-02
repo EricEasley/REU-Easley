@@ -25,7 +25,7 @@ int main(int argc, char *argv[]){
 	int stride, padding;
 
 /*
-	Setup
+	Setup 
 */
 
 	if(argc != 5){
