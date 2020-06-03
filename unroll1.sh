@@ -9,9 +9,7 @@ do
 for k in kernelCHW*
 do
 
-cat unrollerHeader > ../unroll/unrolled1$i$k
-../unroller $i $k 1 0 >> ../unroll/unrolled1$i$k
-cat unrollerFooter >> ../unroll/unrolled1$i$k
+../iunroll1.sh $i $k
 
 done
 done
@@ -21,9 +19,7 @@ do
 for k in kernelHWC*
 do
 
-cat unrollerHeader > ../unroll/unrolled1$i$k
-../unroller $i $k 1 0 >> ../unroll/unrolled1$i$k
-cat unrollerFooter >> ../unroll/unrolled1$i$k
+../iunroll1.sh $i $k
 
 done
 done
