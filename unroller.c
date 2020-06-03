@@ -99,37 +99,37 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 
 	if(!strcmp(type, "CHW")){
 	        for(iterations = 0; iterations < ITERATIONS; iterations++){
-			for(ic = 0; ic < icnls; ic++){
-				for(kc = 0; kc < kcnls; kc++){
-				        for(i = 0; i < oh; i++){
-			        	        for(j = 0; j < ow; j++){
-		        	        	printf("\t\tomap[%i][%i][%i] = 0;\n", kc, i, j);
+			printf("\t\t\tfor(ic = 0; ic < icnls; ic++){\n");
+				printf("\t\t\t\tfor(kc = 0; kc < kcnls; kc++){\n");
+				        printf("\t\t\t\t\tfor(i = 0; i < oh; i++){\n");
+			        	        printf("\t\t\t\t\t\tfor(j = 0; j < ow; j++){\n");
+		        	        	printf("\t\t\t\t\t\t\tomap[kc][i][j] = 0;\n");
 		                	        	for(x = 0; x < kh; x++){
 		                        	        	for(y = 0; y < kw; y++){
-		                                	        	printf("\t\tomap[%i][%i][%i] += imap[%i][%i][%i] * kernel[%i][%i][%i];\n", kc, i, j, ic, i*stride + x, j*stride + y, kc, x, y);
+		                                	        	printf("\t\t\t\t\t\t\tomap[kc][i][j] += imap[ic][i*stride + %i][j*stride + %i] * kernel[kc][%i][%i];\n", i*stride + x, j*stride + y, x, y);
 								}
 		                                	}
-		                        	}
-		                	}
-				}
-			}
+		                        	printf("\t\t\t\t\t\t}\n");
+		                	printf("\t\t\t\t\t}\n");
+				printf("\t\t\t\t}\n");
+			printf("\t\t\t}\n");
 		}
         } else { // HWC
 		for(iterations = 0; iterations < ITERATIONS; iterations++){
-			for(i = 0; i < oh; i++){
-                                for(j = 0; j < ow; j++){
-					for(ic = 0; ic < icnls; ic++){
-	                                        for(kc = 0; kc < kcnls; kc++){
-        	                                printf("\t\tomap[%i][%i][%i] = 0;\n", i, j, kc);
+			printf("\t\t\tfor(i = 0; i < oh; i++){\n");
+                                printf("\t\t\t\tfor(j = 0; j < ow; j++){\n");
+					printf("\t\t\t\t\tfor(ic = 0; ic < icnls; ic++){\n");
+	                                        printf("\t\t\t\t\t\tfor(kc = 0; kc < kcnls; kc++){\n");
+        	                                printf("\t\t\t\t\t\t\tomap[i][j][kc] = 0;\n");
                 	                                for(x = 0; x < kh; x++){
                         	                                for(y = 0; y < kw; y++){
-                                	                                printf("\t\tomap[%i][%i][%i] += imap[%i][%i][%i] * kernel[%i][%i][%i];\n", i, j, kc, i*stride + x, j*stride + y, ic, x, y, kc);
+                                	                                printf("\t\t\t\t\t\t\tomap[i][j][kc] += imap[i*stride + %i][j*stride+ %i][ic] * kernel[%i][%i][kc];\n", x, y, x, y);
 								}
                                                         }
-                                                }
-                                        }
-                                }
-                        }
+                                                printf("\t\t\t\t\t\t}\n");
+                                        printf("\t\t\t\t\t}\n");
+                                printf("\t\t\t\t}\n");
+                        printf("\t\t\t}\n");
 
 		}
 
