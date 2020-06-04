@@ -1,0 +1,16 @@
+
+        time = clock() - time;
+        clocks = read_cycles() - clocks;
+
+        printf("%s ordering of %i and %i channels over %i and %i channels took %lf seconds for %i iterations, with %llu cycles\n", type, kh, kcnls, (oh - 1) * stride + kh, icnls, (double)time/CLOCKS_PER_SEC, ITERATIONS, clocks);
+//      printf("Clocks: %lli\n", clocks);
+
+        return omap;
+}
+
+unsigned long read_cycles(void)
+{
+  unsigned long cycles;
+  asm volatile ("rdcycle %0" : "=r" (cycles));
+  return cycles;
+}
