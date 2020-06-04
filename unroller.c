@@ -106,7 +106,7 @@ float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  
 		        	        	printf("\t\t\t\t\t\t\tomap[kc][i][j] = 0;\n");
 		                	        	for(x = 0; x < kh; x++){
 		                        	        	for(y = 0; y < kw; y++){
-		                                	        	printf("\t\t\t\t\t\t\tomap[kc][i][j] += imap[ic][i*stride + %i][j*stride + %i] * kernel[kc][%i][%i];\n", i*stride + x, j*stride + y, x, y);
+		                                	        	printf("\t\t\t\t\t\t\tomap[kc][i][j] += imap[ic][i*stride + %i][j*stride + %i] * kernel[kc][%i][%i];\n", x, y, x, y);
 								}
 		                                	}
 		                        	printf("\t\t\t\t\t\t}\n");
