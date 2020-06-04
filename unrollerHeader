@@ -1,0 +1,258 @@
+/*
+	Program executes a discrete convolution of a kernel (arg2) over an input feature map (arg1)
+
+	Program will print final result if compiled with -DPRINT flag
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+#define ITERATIONS 1
+
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[], int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride);
+unsigned long read_cycles(void);
+
+int main(int argc, char *argv[]){
+	FILE *kernelfile, *inputfile;
+	int k1, k2, kc, i1, i2, ic, o1, o2, oc;
+	char ktype[4], itype[4];
+	int i, j, x, y;
+	unsigned long long int iterations;
+	float ***imap, ***kernel, ***omap;
+	clock_t time;
+	int stride, padding;
+
+/*
+	Setup
+*/
+
+	if(argc != 5){
+		printf("usage: ./conv <input feature map> <kernel> <stride> <padding>\n");
+		exit(1);
+	}
+
+	stride = atoi(argv[3]);
+	padding = atoi(argv[4]);
+
+	if(stride <= 0){
+		printf("Stride must be a positive integer\n");
+		exit(1);
+	}
+
+	if(padding < 0){
+		printf("Padding must be a non-negative integer\n");
+		exit(1);
+	}
+
+	inputfile = fopen(argv[1], "r");
+	if(inputfile == NULL){
+		printf("Couldn't open input feature map file\n");
+		exit(1);
+	}
+
+	kernelfile = fopen(argv[2], "r");
+	if(kernelfile == NULL){
+		printf("Couldn't open kernel file\n");
+		exit(1);
+	}
+
+	fscanf(inputfile, "%s", itype);
+
+	fscanf(kernelfile, "%s", ktype);
+
+	if(!strcmp(itype, "CHW")){
+		fscanf(inputfile, "%i %i %i", &ic, &i1, &i2);
+	} else {
+		fscanf(inputfile, "%i %i %i", &i1, &i2, &ic);
+	}
+
+	if(!strcmp(ktype, "CHW")){
+		fscanf(kernelfile, "%i %i %i", &kc, &k1, &k2);
+	} else {
+		fscanf(kernelfile, "%i %i %i", &k1, &k2, &kc);
+	}
+
+	i1 = i1 + 2*padding;
+	i2 = i2 + 2*padding;
+
+	o1 = (i1 - k1) / stride + 1;
+	o2 = (i2 - k2) / stride + 1;
+	oc = ic * kc;
+
+	if(!strcmp(itype, "CHW")){
+
+		imap = (float***) malloc(sizeof(float**) * ic);
+		kernel = (float***) malloc(sizeof(float**) * kc);
+		omap = (float***) malloc(sizeof(float**) * oc);
+
+                for(i = 0; i < oc; i++){
+                        omap[i] = (float**) malloc(sizeof(float*) * o1);
+                        for(j = 0; j < o1; j++){
+                                omap[i][j] = (float*) malloc(sizeof(float) * o2);
+                        }
+                }
+
+  		for(i = 0; i < ic; i++){
+			imap[i] = (float**) malloc(sizeof(float*) * i1);
+			for(j = 0; j < i1; j++){
+        			imap[i][j] = (float*) malloc(sizeof(float) * i2);
+			}
+  		}
+
+  		for(i = 0; i < kc; i++){
+  			kernel[i] = (float**) malloc(sizeof(float*) * k1);
+			for(j = 0; j < k1; j++){
+        			kernel[i][j] = (float*) malloc(sizeof(float) * k2);
+      			}
+		}
+
+    		for(x = 0; x < kc; x++){
+    			for(i = 0; i < k1; i++){
+	    			for(j = 0; j < k2; j++){
+		    			fscanf(kernelfile, "%f", kernel[x][i] + j);
+  		  		}
+  	  		}
+    		}
+
+    		for(x = 0; x < ic; x++){
+  	  		for(i = 0; i < (i1 - 2*padding); i++){
+        			for(j = 0; j < (i2 - 2*padding); j++){
+          				fscanf(inputfile, "%f", imap[x][i + padding] + j + padding);
+        			}
+      			}
+    		}
+
+  	} else { // HWC
+
+  		imap = (float***) malloc(sizeof(float**) * i1);
+	  	kernel = (float***) malloc(sizeof(float**) * k1);
+		omap = (float***) malloc(sizeof(float**) * o1);
+
+                for(i = 0; i < o1; i++){
+                        omap[i] = (float**) malloc(sizeof(float*) * o2);
+                        for(j = 0; j < o2; j++){
+                                omap[i][j] = (float*) malloc(sizeof(float) * oc);
+                        }
+                }
+
+  		for(i = 0; i < i1; i++){
+  			imap[i] = (float**) malloc(sizeof(float*) * i2);
+      			for(j = 0; j < i2; j++){
+        			imap[i][j] = (float*) malloc(sizeof(float) * ic);
+      			}
+  		}
+
+  		for(i = 0; i < k1; i++){
+  			kernel[i] = (float**) malloc(sizeof(float*) * k2);
+      			for(j = 0; j < k2; j++){
+        			kernel[i][j] = (float*) malloc(sizeof(float) * kc);
+      			}
+	  	}
+
+    		for(x = 0; x < k1; x++){
+    			for(i = 0; i < k2; i++){
+	    			for(j = 0; j < kc; j++){
+		    			fscanf(kernelfile, "%f", kernel[x][i] + j);
+  		  		}
+  	  		}
+    		}
+
+    		for(x = 0; x < (i1 - 2*padding); x++){
+  	  		for(i = 0; i < (i2 - 2*padding); i++){
+        			for(j = 0; j < ic; j++){
+          				fscanf(inputfile, "%f", imap[x + padding][i + padding] + j);
+        			}
+      			}
+    		}
+
+  	}
+/*
+	Convolution algorithm
+*/
+
+	convolve(imap, kernel, omap, itype, ic, kc, k1, k2, o1, o2, stride);
+
+#ifdef PRINT
+	for(x = 0; x < oc; x++){
+		for(i = 0; i < o1; i++){
+			for(j = 0; j < o2; j++){
+				if(!strcmp(itype, "CHW")){
+					printf("%f ", omap[x][i][j]);
+				} else {
+					printf("%f ", omap[i][j][x]);
+				}
+			}
+			printf("\n");
+		}
+		if(x != (oc-1)){printf("\n");}
+	}
+#endif
+/*
+	Destruction of dynamic data
+*/
+  	if(!strcmp(itype, "CHW")){
+	  	for(i = 0; i < ic; i++){
+      			for(j = 0; j < i1; j++){
+        			free(imap[i][j]);
+      			}
+      			free(imap[i]);
+    		}
+
+    		for(i = 0; i < kc; i++){
+      			for(j = 0; j < k1; j++){
+        			free(kernel[i][j]);
+      			}
+      			free(kernel[i]);
+    		}
+
+	  	for(i = 0; i < oc; i++){
+      			for(j = 0; j < o1; j++){
+        			free(omap[i][j]);
+      			}
+		  	free(omap[i]);
+	  	}
+
+  	} else {
+
+    		for(i = 0; i < i1; i++){
+      			for(j = 0; j < i2; j++){
+        			free(imap[i][j]);
+      			}
+      			free(imap[i]);
+    		}
+
+    		for(i = 0; i < k1; i++){
+      			for(j = 0; j < k2; j++){
+        			free(kernel[i][j]);
+      			}
+      			free(kernel[i]);
+    		}
+
+	  	for(i = 0; i < o1; i++){
+      			for(j = 0; j < o2; j++){
+        			free(omap[i][j]);
+      			}
+		  	free(omap[i]);
+	  	}
+  	}
+
+	free(kernel);
+	free(imap);
+	free(omap);
+	fclose(kernelfile);
+	fclose(inputfile);
+
+	return 0;
+}
+
+float *** convolve(float ***imap, float ***kernel, float ***omap, char type[],  int icnls, int kcnls, int kh, int kw, int oh, int ow, int stride){
+	clock_t time;
+	unsigned long long int iterations;
+	int i, j, x, y, ic, kc;
+	unsigned long long clocks;
+
+        time = clock();
+	clocks = read_cycles();
+
